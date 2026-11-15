@@ -256,7 +256,7 @@
     <div class="container">
         <h1>📊 量化交易分析看板</h1>
         <div class="subtitle">OpenClaw 量化系统 · 每日自动更新</div>
-        <div class="update-time">最后更新: 2026-11-15 20:14 | 数据日期: 2026-11-15</div>
+        <div class="update-time">最后更新: 2026-11-15 20:17 | 数据日期: 2026-11-15</div>
         
         <div class="grid">
             <!-- 板块强度 -->
@@ -681,30 +681,32 @@
             const sectors = ['金融', '电力', '制造', '科技', '金属'];
             const dataArrays = [sectorData.financial, sectorData.power, sectorData.manufacturing, sectorData.tech, sectorData.metal];
             
+            // 数据顺序：arr[0]是最旧，arr[arr.length-1]是最新
             // 找最强板块（最新值最高）
             let maxIdx = 0;
             let maxVal = 0;
             dataArrays.forEach((arr, idx) => {
-                if (arr[0] > maxVal) {
-                    maxVal = arr[0];
+                const latest = arr[arr.length - 1];
+                if (latest > maxVal) {
+                    maxVal = latest;
                     maxIdx = idx;
                 }
             });
-            insights.push(`🔥 <strong>${sectors[maxIdx]}</strong>板块当前最强（${maxVal}分）`);
+            insights.push(`🔥 <strong>${sectors[maxIdx]}</strong>板块当前最强（${maxVal.toFixed(1)}分）`);
             
-            // 找上升趋势最猛的
+            // 找上升趋势最猛的（最新 - 最旧）
             let maxGrowth = -Infinity;
             let growthIdx = 0;
             dataArrays.forEach((arr, idx) => {
-                if (arr.length >= 3) {
-                    const growth = arr[0] - arr[arr.length - 1];
+                if (arr.length >= 2) {
+                    const growth = arr[arr.length - 1] - arr[0];
                     if (growth > maxGrowth) {
                         maxGrowth = growth;
                         growthIdx = idx;
                     }
                 }
             });
-            if (maxGrowth > 0) {
+            if (maxGrowth > 5) {
                 insights.push(`📈 <strong>${sectors[growthIdx]}</strong>板块上升趋势最明显（+${maxGrowth.toFixed(1)}分）`);
             }
             
@@ -712,8 +714,8 @@
             let maxDecline = 0;
             let declineIdx = 0;
             dataArrays.forEach((arr, idx) => {
-                if (arr.length >= 3) {
-                    const decline = arr[arr.length - 1] - arr[0];
+                if (arr.length >= 2) {
+                    const decline = arr[0] - arr[arr.length - 1];
                     if (decline > maxDecline) {
                         maxDecline = decline;
                         declineIdx = idx;
