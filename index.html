@@ -256,7 +256,7 @@
     <div class="container">
         <h1>📊 量化交易分析看板</h1>
         <div class="subtitle">OpenClaw 量化系统 · 每日自动更新</div>
-        <div class="update-time">最后更新: 2026-11-15 20:18 | 数据日期: 2026-11-15</div>
+        <div class="update-time">最后更新: 2026-11-15 20:19 | 数据日期: 2026-11-15</div>
         
         <div class="grid">
             <!-- 板块强度 -->
@@ -694,36 +694,32 @@
             });
             insights.push(`🔥 <strong>${sectors[maxIdx]}</strong>板块当前最强（${maxVal.toFixed(1)}分）`);
             
-            // 找上升趋势最猛的（最新 - 最旧）
-            let maxGrowth = -Infinity;
-            let growthIdx = 0;
-            dataArrays.forEach((arr, idx) => {
+            // 计算每个板块的变化（最新 - 最旧）
+            const changes = dataArrays.map((arr, idx) => {
                 if (arr.length >= 2) {
-                    const growth = arr[arr.length - 1] - arr[0];
-                    if (growth > maxGrowth) {
-                        maxGrowth = growth;
-                        growthIdx = idx;
-                    }
+                    return {
+                        sector: sectors[idx],
+                        change: arr[arr.length - 1] - arr[0]
+                    };
                 }
+                return { sector: sectors[idx], change: 0 };
             });
-            if (maxGrowth > 5) {
-                insights.push(`📈 <strong>${sectors[growthIdx]}</strong>板块上升趋势最明显（+${maxGrowth.toFixed(1)}分）`);
+            
+            // 找上升最多的
+            const upChanges = changes.filter(c => c.change > 0).sort((a, b) => b.change - a.change);
+            if (upChanges.length > 0 && upChanges[0].change > 5) {
+                insights.push(`📈 <strong>${upChanges[0].sector}</strong>板块上升趋势最明显（+${upChanges[0].change.toFixed(1)}分）`);
             }
             
-            // 找下降趋势的
-            let maxDecline = 0;
-            let declineIdx = 0;
-            dataArrays.forEach((arr, idx) => {
-                if (arr.length >= 2) {
-                    const decline = arr[0] - arr[arr.length - 1];
-                    if (decline > maxDecline) {
-                        maxDecline = decline;
-                        declineIdx = idx;
-                    }
-                }
-            });
-            if (maxDecline > 10) {
-                insights.push(`⚠️ <strong>${sectors[declineIdx]}</strong>板块主力撤退（-${maxDecline.toFixed(1)}分）`);
+            // 找下降最多的
+            const downChanges = changes.filter(c => c.change < 0).sort((a, b) => a.change - b.change);
+            if (downChanges.length > 0 && Math.abs(downChanges[0].change) > 10) {
+                insights.push(`⚠️ <strong>${downChanges[0].sector}</strong>板块主力撤退（${downChanges[0].change.toFixed(1)}分）`);
+            }
+            
+            // 如果所有板块都在下降
+            if (upChanges.length === 0 && downChanges.length > 0) {
+                insights.push(`⚠️ 全市场板块强度整体下降，注意风险`);
             }
             
             document.getElementById('rotationInsight').innerHTML = insights.join('<br>');
