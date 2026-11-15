@@ -256,7 +256,7 @@
     <div class="container">
         <h1>📊 量化交易分析看板</h1>
         <div class="subtitle">OpenClaw 量化系统 · 每日自动更新</div>
-        <div class="update-time">最后更新: 2026-11-15 20:13 | 数据日期: 2026-11-15</div>
+        <div class="update-time">最后更新: 2026-11-15 20:14 | 数据日期: 2026-11-15</div>
         
         <div class="grid">
             <!-- 板块强度 -->
@@ -440,9 +440,21 @@
     
             </div>
 
-            <!-- 近7日走势 -->
+            <!-- 板块轮动曲线图 -->
             <div class="card full-width">
-                <div class="card-title">📊 近7日板块强度走势</div>
+                <div class="card-title">📈 板块轮动趋势图</div>
+                <div style="position: relative; height: 350px;">
+                    <canvas id="sectorChart"></canvas>
+                </div>
+                <div style="margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                    <div style="color: #888; font-size: 0.85rem; margin-bottom: 8px;">💡 主力方向判断</div>
+                    <div id="rotationInsight" style="font-size: 0.9rem; line-height: 1.6;"></div>
+                </div>
+            </div>
+
+            <!-- 近7日走势表格 -->
+            <div class="card full-width">
+                <div class="card-title">📊 近7日板块强度数据</div>
                 <table>
                     <thead>
                         <tr>
@@ -561,5 +573,161 @@
             Powered by <a href="https://github.com/JUN988951/quant-dashboard" target="_blank">OpenClaw 量化交易系统</a> | 数据仅供参考，不构成投资建议
         </div>
     </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // 板块轮动数据
+        const sectorData = {"dates": ["11-06", "11-09", "11-10", "11-11", "11-12", "11-13", "11-15"], "financial": [48.5, 0, 44.7, 45.1, 44.2, 43.2, 43.2], "power": [79.1, 0, 49.6, 53.7, 41.9, 33.6, 33.6], "manufacturing": [68.1, 0, 49.8, 59.6, 65.3, 36.6, 36.6], "tech": [69.8, 0, 49.8, 65.8, 64.5, 35.8, 35.8], "metal": [67.5, 0, 58.6, 50.5, 46.0, 26.5, 26.5]};
+        
+        // 生成图表
+        const ctx = document.getElementById('sectorChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sectorData.dates,
+                datasets: [
+                    {
+                        label: '金融',
+                        data: sectorData.financial,
+                        borderColor: '#ff4757',
+                        backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '电力',
+                        data: sectorData.power,
+                        borderColor: '#ffa502',
+                        backgroundColor: 'rgba(255, 165, 2, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '制造',
+                        data: sectorData.manufacturing,
+                        borderColor: '#2ed573',
+                        backgroundColor: 'rgba(46, 213, 115, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '科技',
+                        data: sectorData.tech,
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '金属',
+                        data: sectorData.metal,
+                        borderColor: '#7b2ff7',
+                        backgroundColor: 'rgba(123, 47, 247, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#eee',
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#eee',
+                        borderColor: 'rgba(255,255,255,0.2)',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        },
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        // 生成主力方向判断
+        function generateInsight() {
+            const insights = [];
+            const sectors = ['金融', '电力', '制造', '科技', '金属'];
+            const dataArrays = [sectorData.financial, sectorData.power, sectorData.manufacturing, sectorData.tech, sectorData.metal];
+            
+            // 找最强板块（最新值最高）
+            let maxIdx = 0;
+            let maxVal = 0;
+            dataArrays.forEach((arr, idx) => {
+                if (arr[0] > maxVal) {
+                    maxVal = arr[0];
+                    maxIdx = idx;
+                }
+            });
+            insights.push(`🔥 <strong>${sectors[maxIdx]}</strong>板块当前最强（${maxVal}分）`);
+            
+            // 找上升趋势最猛的
+            let maxGrowth = -Infinity;
+            let growthIdx = 0;
+            dataArrays.forEach((arr, idx) => {
+                if (arr.length >= 3) {
+                    const growth = arr[0] - arr[arr.length - 1];
+                    if (growth > maxGrowth) {
+                        maxGrowth = growth;
+                        growthIdx = idx;
+                    }
+                }
+            });
+            if (maxGrowth > 0) {
+                insights.push(`📈 <strong>${sectors[growthIdx]}</strong>板块上升趋势最明显（+${maxGrowth.toFixed(1)}分）`);
+            }
+            
+            // 找下降趋势的
+            let maxDecline = 0;
+            let declineIdx = 0;
+            dataArrays.forEach((arr, idx) => {
+                if (arr.length >= 3) {
+                    const decline = arr[arr.length - 1] - arr[0];
+                    if (decline > maxDecline) {
+                        maxDecline = decline;
+                        declineIdx = idx;
+                    }
+                }
+            });
+            if (maxDecline > 10) {
+                insights.push(`⚠️ <strong>${sectors[declineIdx]}</strong>板块主力撤退（-${maxDecline.toFixed(1)}分）`);
+            }
+            
+            document.getElementById('rotationInsight').innerHTML = insights.join('<br>');
+        }
+        
+        generateInsight();
+    </script>
 </body>
 </html>
