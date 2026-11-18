@@ -55,6 +55,8 @@
       warns.push('涨跌家数合计 ' + r.total + ' 只，超出正常范围（约 5,200），数据可能不完整');
     }
     if (!r.zt && !r.dt) warns.push('三池返回为空，接口可能异常');
+    if (r.degraded) warns.push(r.degraded);
+    if (r.redRate == null) warns.push('红盘率缺失 → 判定已自动降级（少一项依据），请谨慎参考');
     var hm = now.getHours() * 100 + now.getMinutes();
     var intraday = (r.date === today) && hm >= 930 && hm <= 1505;
     if (intraday) warns.push('现在是盘中，数据未定稿——档位和涨跌停数还会变');
@@ -90,7 +92,8 @@
 
     var progRows = [
       ['跌停家数', r.dt + ' 家', '≤ 5 家', r.progress.dt],
-      ['红盘率', r.redRate.toFixed(1) + '%', '≥ 45%', r.progress.red],
+      ['红盘率', (r.redRate == null ? '—' : r.redRate.toFixed(1) + '%'), '≥ 45%',
+       (r.progress.red == null ? 0 : r.progress.red)],
       ['上证 vs MA20', (r.dev20 >= 0 ? '+' : '') + r.dev20.toFixed(2) + '%',
        '站上 ' + r.ma20.toFixed(2), r.progress.dev]
     ].map(function (x) {
@@ -123,7 +126,9 @@
       r.zbRate.toFixed(1) + '%</span><span class="ls">封板 ' + r.sealRate.toFixed(1) + '%</span></div>' +
       '<div class="lcell"><span class="lk">涨跌停比</span><span class="lgv">' + ratioTxt + '</span></div>' +
       '<div class="lcell"><span class="lk">红盘率</span><span class="lgv">' +
-      r.redRate.toFixed(1) + '%</span><span class="ls">' + r.up + '涨/' + r.down + '跌</span></div>' +
+      (r.redRate == null ? '—' : r.redRate.toFixed(1) + '%') +
+      '</span><span class="ls">' +
+      (r.redRate == null ? '数据源缺失' : r.up + '涨/' + r.down + '跌') + '</span></div>' +
       '</div>' +
       '<div class="lrow"><span class="lk">连板梯队</span>' +
       '<span class="lgv">' + esc(ladderTxt) + '</span>' +
