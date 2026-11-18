@@ -56,6 +56,7 @@
     }
     if (!r.zt && !r.dt) warns.push('三池返回为空，接口可能异常');
     if (r.degraded) warns.push(r.degraded);
+    if (r.note) warns.push('ℹ️ ' + r.note);
     if (r.redRate == null) warns.push('红盘率缺失 → 判定已自动降级（少一项依据），请谨慎参考');
     var hm = now.getHours() * 100 + now.getMinutes();
     var intraday = (r.date === today) && hm >= 930 && hm <= 1505;
@@ -125,10 +126,11 @@
       '<div class="lcell"><span class="lk">炸板率</span><span class="lgv">' +
       r.zbRate.toFixed(1) + '%</span><span class="ls">封板 ' + r.sealRate.toFixed(1) + '%</span></div>' +
       '<div class="lcell"><span class="lk">涨跌停比</span><span class="lgv">' + ratioTxt + '</span></div>' +
-      '<div class="lcell"><span class="lk">红盘率</span><span class="lgv">' +
+      '<div class="lcell"><span class="lk">红盘率' +
+      (r.redSource === 'eastmoney' ? '（东财口径）' : '') + '</span><span class="lgv">' +
       (r.redRate == null ? '—' : r.redRate.toFixed(1) + '%') +
       '</span><span class="ls">' +
-      (r.redRate == null ? '数据源缺失' : r.up + '涨/' + r.down + '跌') + '</span></div>' +
+      (r.redRate == null ? '两源均不可用' : r.up + '涨/' + r.down + '跌') + '</span></div>' +
       '</div>' +
       '<div class="lrow"><span class="lk">连板梯队</span>' +
       '<span class="lgv">' + esc(ladderTxt) + '</span>' +
