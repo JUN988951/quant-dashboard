@@ -71,6 +71,21 @@
     return getJSON(u).then(function (j) { return (j && j.data) || []; });
   }
 
+  /* 涨跌家数（东财口径，支持 CORS）——腾讯被封时的备用 */
+  function breadth() {
+    var u = 'https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2' +
+            '&secids=1.000001,0.399001&fields=f104,f105,f106,f12,f14';
+    return getJSON(u).then(function (j) {
+      var arr = (j && j.data && j.data.diff) || [];
+      var up = 0, dn = 0, fl = 0;
+      arr.forEach(function (x) {
+        up += (+x.f104 || 0); dn += (+x.f105 || 0); fl += (+x.f106 || 0);
+      });
+      if (!up && !dn) throw new Error('红盘率备用源为空');
+      return { up: up, down: dn, flat: fl };
+    });
+  }
+
   function pct(a, b) { return b ? (a - b) / b * 100 : 0; }
   function ma(arr, n) {
     if (arr.length < n) n = arr.length;
@@ -219,32 +234,51 @@
                  });
       out.concepts = cs;
 
-      /* 档位 */
-      out.tier = tierOf(out);
-      out.tierPos = TIER_POS[out.tier];
-      out.singleLots = TIER_SINGLE[out.tier];
+      /* 档位 + 进度（抽成函数，便于在补取红盘率后统一收尾） */
+      function finalize() {
+        out.tier = tierOf(out);
+        out.tierPos = TIER_POS[out.tier];
+        out.singleLots = TIER_SINGLE[out.tier];
 
-      /* 恢复进度（0%→100%） */
-      function prog(v, floor, target) {
-        if (target === floor) return 100;
-        var p = (v - floor) / (target - floor) * 100;
-        return Math.max(0, Math.min(100, p));
+        function prog(v, floor, target) {
+          if (target === floor) return 100;
+          var p = (v - floor) / (target - floor) * 100;
+          return Math.max(0, Math.min(100, p));
+        }
+        out.progress = {
+          dt: r1(prog(out.dt, 60, 5)),
+          red: (out.redRate == null) ? null : r1(prog(out.redRate, 10, 45)),
+          dev: r1(prog(out.dev20, -2, 0))
+        };
+        var pg = [out.progress.dt, out.progress.dev];
+        if (out.progress.red != null) pg.push(out.progress.red);
+        out.progressAll = Math.round(pg.reduce(function (a, b) { return a + b; }, 0) / pg.length);
+
+        if (shK && shK.src === 'eastmoney')
+          out.degraded = 'K线走了备用数据源（东财）';
+        if (out.redSource === 'eastmoney')
+          out.note = '红盘率取自东财口径（与腾讯口径约差 1 个百分点）';
+
+        out.ok = true;
+        out.fetchedAt = new Date().toISOString();
+        return out;
       }
-      out.progress = {
-        dt: r1(prog(out.dt, 60, 5)),
-        red: (out.redRate == null) ? null : r1(prog(out.redRate, 10, 45)),
-        dev: r1(prog(out.dev20, -2, 0))
-      };
-      var pg = [out.progress.dt, out.progress.dev];
-      if (out.progress.red != null) pg.push(out.progress.red);
-      out.progressAll = Math.round(pg.reduce(function (a, b) { return a + b; }, 0) / pg.length);
 
-      if (shK && shK.src === 'eastmoney')
-        out.degraded = 'K线走了备用数据源（东财），红盘率缺失';
-
-      out.ok = true;
-      out.fetchedAt = new Date().toISOString();
-      return out;
+      /* 红盘率缺失时，用东财补一次 */
+      if (out.redRate == null) {
+        return breadth().then(function (b) {
+          out.up = b.up; out.down = b.down; out.flat = b.flat;
+          out.total = b.up + b.down + b.flat;
+          out.redRate = r1(b.up / (b.up + b.down) * 100);
+          out.redSource = 'eastmoney';
+          return finalize();
+        }).catch(function () {
+          out.redRate = null;
+          out.degraded = (out.degraded ? out.degraded + '；' : '') + '红盘率两个源都取不到';
+          return finalize();
+        });
+      }
+      return finalize();
     }).catch(function (e) {
       out.ok = false;
       out.errors.push(String(e && e.message || e));
