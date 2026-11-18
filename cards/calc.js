@@ -21,9 +21,11 @@
   };
 
   function getJSON(url) {
-    var opt = { cache: 'no-store', headers: { 'Accept': 'application/json,text/plain,*/*' } };
-    return fetch(url, opt).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + url);
+    // 注意：不能传自定义 headers / cache:'no-store'，否则浏览器会发预检 OPTIONS，
+    // 而部分接口不支持预检会直接失败。用时间戳参数绕过缓存即可（仍是「简单请求」）。
+    var u = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+    return fetch(u).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + url.split('?')[0]);
       return r.text();
     }).then(function (t) {
       try { return JSON.parse(t); } catch (e) { throw new Error('JSON 解析失败'); }
@@ -35,19 +37,22 @@
              code + ',day,,,' + n + ',qfq';
     return getJSON(tu).then(function (j) {
       var d = j && j.data && j.data[code];
-      if (!d || !d.day || !d.day.length) throw new Error('K线为空 ' + code);
+      if (!d || !d.day || !d.day.length) throw new Error('腾讯K线为空 ' + code);
       return { day: d.day, qt: d.qt || {}, code: code, src: 'tencent' };
     }).catch(function () {
-      // 备用：新浪日K（无 zhishu 字段）
-      var su = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/' +
-               'CN_MarketData.getKLineData?symbol=' + code +
-               '&scale=240&ma=no&datalen=' + n;
-      return getJSON(su).then(function (arr) {
-        if (!arr || !arr.length) throw new Error('备用K线也为空 ' + code);
-        var day = arr.map(function (x) {
-          return [x.day, x.open, x.close, x.high, x.low, x.volume];
+      // 备用：东财日K（支持 CORS，但没有涨跌家数字段）
+      var secid = (code.indexOf('sh') === 0 ? '1.' : '0.') + code.slice(2);
+      var eu = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + secid +
+               '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56' +
+               '&klt=101&fqt=1&end=20500101&lmt=' + n;
+      return getJSON(eu).then(function (j) {
+        var d = j && j.data;
+        if (!d || !d.klines || !d.klines.length) throw new Error('备用K线为空 ' + code);
+        var day = d.klines.map(function (s) {
+          var a = s.split(',');
+          return [a[0], a[1], a[2], a[3], a[4], a[5]];  // 日期,开,收,高,低,量
         });
-        return { day: day, qt: {}, code: code, src: 'sina' };
+        return { day: day, qt: {}, code: code, src: 'eastmoney' };
       });
     });
   }
@@ -234,8 +239,8 @@
       if (out.progress.red != null) pg.push(out.progress.red);
       out.progressAll = Math.round(pg.reduce(function (a, b) { return a + b; }, 0) / pg.length);
 
-      if (shK && shK.src === 'sina')
-        out.degraded = 'K线走了备用数据源（腾讯被限流），红盘率可能缺失';
+      if (shK && shK.src === 'eastmoney')
+        out.degraded = 'K线走了备用数据源（东财），红盘率缺失';
 
       out.ok = true;
       out.fetchedAt = new Date().toISOString();
