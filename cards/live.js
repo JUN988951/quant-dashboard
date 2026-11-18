@@ -47,7 +47,7 @@
     var today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
     var stamp = pad(now.getHours()) + ':' + pad(now.getMinutes());
 
-    var warns = [];
+    var warns = [], notes = [];
     if (r.date !== today) {
       warns.push('数据日期 ' + r.date + ' 不是今天（' + today + '），可能是休市或接口滞后');
     }
@@ -56,17 +56,23 @@
     }
     if (!r.zt && !r.dt) warns.push('三池返回为空，接口可能异常');
     if (r.degraded) warns.push(r.degraded);
-    if (r.note) warns.push('ℹ️ ' + r.note);
-    if (r.redRate == null) warns.push('红盘率缺失 → 判定已自动降级（少一项依据），请谨慎参考');
+    if (r.note) notes.push(r.note);
+    if (r.redRate == null) warns.push('红盘率缺失（两个源都取不到）→ 判定已降级，请谨慎参考');
     var hm = now.getHours() * 100 + now.getMinutes();
     var intraday = (r.date === today) && hm >= 930 && hm <= 1505;
     if (intraday) warns.push('现在是盘中，数据未定稿——档位和涨跌停数还会变');
 
-    var warnHtml = warns.length
-      ? '<div class="livewarn">' + warns.map(function (w) {
-          return '⚠️ ' + esc(w);
-        }).join('<br/>') + '</div>'
-      : '';
+    var warnHtml = '';
+    if (warns.length) {
+      warnHtml += '<div class="livewarn">' + warns.map(function (w) {
+        return '⚠️ ' + esc(w);
+      }).join('<br/>') + '</div>';
+    }
+    if (notes.length) {
+      warnHtml += '<div class="livenote">' + notes.map(function (n) {
+        return 'ℹ️ ' + esc(n);
+      }).join('<br/>') + '</div>';
+    }
 
     var ratioTxt = r.ratio == null ? '—' : r.ratio.toFixed(2) + ' : 1';
     var ladderTxt = Object.keys(r.ladder).sort(function (a, b) { return a - b; })
