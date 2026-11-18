@@ -31,12 +31,24 @@
   }
 
   function kline(code, n) {
-    var u = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' +
-            code + ',day,,,' + n + ',qfq';
-    return getJSON(u).then(function (j) {
+    var tu = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' +
+             code + ',day,,,' + n + ',qfq';
+    return getJSON(tu).then(function (j) {
       var d = j && j.data && j.data[code];
       if (!d || !d.day || !d.day.length) throw new Error('K线为空 ' + code);
-      return { day: d.day, qt: d.qt || {}, code: code };
+      return { day: d.day, qt: d.qt || {}, code: code, src: 'tencent' };
+    }).catch(function () {
+      // 备用：新浪日K（无 zhishu 字段）
+      var su = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/' +
+               'CN_MarketData.getKLineData?symbol=' + code +
+               '&scale=240&ma=no&datalen=' + n;
+      return getJSON(su).then(function (arr) {
+        if (!arr || !arr.length) throw new Error('备用K线也为空 ' + code);
+        var day = arr.map(function (x) {
+          return [x.day, x.open, x.close, x.high, x.low, x.volume];
+        });
+        return { day: day, qt: {}, code: code, src: 'sina' };
+      });
     });
   }
 
@@ -63,13 +75,14 @@
   function r1(v) { return Math.round(v * 10) / 10; }
   function r2(v) { return Math.round(v * 100) / 100; }
 
-  /* §1 四档复合判定 */
+  /* §1 四档复合判定（红盘率缺失时自动跳过该项，并标记降级） */
   function tierOf(m) {
-    // 弱势：上证<-1.5% 或 跌停>15 或 红盘率<30%
-    if (m.shChg < -1.5 || m.dt > 15 || m.redRate < 30) return '弱势';
+    var red = (m.redRate == null) ? null : m.redRate;
+    if (m.shChg < -1.5 || m.dt > 15 || (red != null && red < 30)) return '弱势';
     var ratio = m.dt > 0 ? m.zt / m.dt : 99;
     if (m.shChg > 0.5 && ratio >= 3 && m.ladderOk && m.zbRate < 20) return '强势';
-    if (m.shChg >= -0.5 && m.shChg <= 0.5 && ratio >= 1 && m.ladderOk && m.zbRate < 40) return '震荡偏强';
+    if (m.shChg >= -0.5 && m.shChg <= 0.5 && ratio >= 1 && m.ladderOk && m.zbRate < 40)
+      return '震荡偏强';
     return '震荡偏弱';
   }
 
@@ -98,7 +111,8 @@
         ma5: r2(ma(closes, 5)), ma10: r2(ma(closes, 10)),
         ma20: r2(ma(closes, 20)), ma60: r2(ma(closes, 60)),
         dev20: r2(pct(last, ma(closes, 20))),
-        closes5: closes.slice(-5).map(r2)
+        closes5: closes.slice(-5).map(r2),
+        src: sh.src
       };
       out.shChg = out.sh.chg;
       out.dev20 = out.sh.dev20;
@@ -146,7 +160,12 @@
       var down = (+z1[4] || 0) + (+z2[4] || 0);
       var tot = up + flat + down;
       out.up = up; out.down = down; out.flat = flat; out.total = tot;
-      out.redRate = tot ? r1(up / tot * 100) : 0;
+      if (tot > 0) {
+        out.redRate = r1(up / tot * 100);
+      } else {
+        out.redRate = null;                    // 备用数据源无涨跌家数
+        out.degraded = '红盘率缺失（K线走了备用源），该项不参与判定';
+      }
 
       /* 情绪 */
       out.zt = zt.tc; out.dt = dt.tc; out.zb = zb.tc;
@@ -208,10 +227,15 @@
       }
       out.progress = {
         dt: r1(prog(out.dt, 60, 5)),
-        red: r1(prog(out.redRate, 10, 45)),
+        red: (out.redRate == null) ? null : r1(prog(out.redRate, 10, 45)),
         dev: r1(prog(out.dev20, -2, 0))
       };
-      out.progressAll = Math.round((out.progress.dt + out.progress.red + out.progress.dev) / 3);
+      var pg = [out.progress.dt, out.progress.dev];
+      if (out.progress.red != null) pg.push(out.progress.red);
+      out.progressAll = Math.round(pg.reduce(function (a, b) { return a + b; }, 0) / pg.length);
+
+      if (shK && shK.src === 'sina')
+        out.degraded = 'K线走了备用数据源（腾讯被限流），红盘率可能缺失';
 
       out.ok = true;
       out.fetchedAt = new Date().toISOString();
