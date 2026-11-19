@@ -97,20 +97,36 @@
              '<span class="lm">涨停' + c.zt + ' 连板' + c.lb + '</span></div>';
     }).join('');
 
-    var okDt = r.dt <= 5, okRed = r.redRate >= 45, okDev = r.dev20 >= 0;
+    function pctOf(v, floor, target) {
+      if (target === floor) return 100;
+      var p = (v - floor) / (target - floor) * 100;
+      return Math.max(0, Math.min(100, p));
+    }
+    var okDt = r.dt <= 5, okRed = (r.redRate != null && r.redRate >= 45), okDev = r.dev20 >= 0;
     var okn = (okDt ? 1 : 0) + (okRed ? 1 : 0) + (okDev ? 1 : 0);
-    var progRows = [
-      ['跌停家数', r.dt + ' 家', okDt ? '✓ 已达标' : '还差 ' + Math.max(0, r.dt - 5) + ' 家', okDt],
-      ['红盘率', (r.redRate == null ? '—' : r.redRate.toFixed(1) + '%'),
-       okRed ? '✓ 已达标' : (r.redRate == null ? '数据缺失' : '还差 ' + (45 - r.redRate).toFixed(1) + ' 个点'), okRed],
-      ['上证 vs MA20', (r.dev20 >= 0 ? '+' : '') + r.dev20.toFixed(2) + '%',
-       okDev ? '✓ 已达标' : '还差 ' + Math.abs(r.dev20).toFixed(2) + ' 个点', okDev]
-    ].map(function (x) {
-      return '<div class="prow"><div class="pname">' + x[0] + '</div>' +
-             '<div class="pcur">' + x[1] + '</div>' +
-             '<div class="pgap' + (x[3] ? ' ok' : '') + '">' + x[2] + '</div>' +
-             '<div></div></div>';
-    }).join('');
+    var pDt = pctOf(r.dt, 100, 5);
+    var pRed = (r.redRate == null) ? 0 : pctOf(r.redRate, 0, 45);
+    var pDev = pctOf(r.dev20, -3, 0);
+    var pAll = Math.round((pDt + pRed + pDev) / 3);
+
+    function pitem(name, val, p, ok, gap, loS, hiS) {
+      return '<div class="pitem">' +
+        '<div class="phead"><span class="pname">' + name + '</span>' +
+        '<span class="pcur">' + val + '</span>' +
+        '<span class="pgap' + (ok ? ' ok' : '') + '">' + gap + '</span></div>' +
+        '<div class="pbar2"><div class="pfill2' + (ok ? ' good' : '') +
+        '" style="width:' + p.toFixed(1) + '%"></div></div>' +
+        '<div class="pmeta"><span>' + loS + '</span><span>' + Math.round(p) +
+        '%</span><span>' + hiS + '</span></div></div>';
+    }
+    var progRows =
+      pitem('跌停家数', r.dt + ' 家', pDt, okDt,
+            okDt ? '✓ 已达标' : '还差 ' + Math.max(0, r.dt - 5) + ' 家', '100 家', '5 家') +
+      pitem('红盘率', (r.redRate == null ? '—' : r.redRate.toFixed(1) + '%'), pRed, okRed,
+            okRed ? '✓ 已达标' : (r.redRate == null ? '数据缺失' : '还差 ' + (45 - r.redRate).toFixed(1) + ' 个点'),
+            '0%', '45%') +
+      pitem('上证 vs MA20', (r.dev20 >= 0 ? '+' : '') + r.dev20.toFixed(2) + '%', pDev, okDev,
+            okDev ? '✓ 已达标' : '还差 ' + Math.abs(r.dev20).toFixed(2) + ' 个点', '−3%', '0%');
 
     box.innerHTML =
       '<div class="pcard livecard">' +
@@ -146,8 +162,12 @@
       '<div class="lh">板块超额（板块 − 中证800）</div>' + exRows +
       '<div class="lh">今日题材（同花顺概念 · 按涨幅）</div>' + cRows +
       '<div class="lh">离可买入还差多少</div>' + progRows +
-      '<div class="pfoot"><b>达标 ' + okn + '/3</b> ｜ 阈值：跌停≤5家、红盘率≥45%、上证站上MA20<br/>' +
-      '本区由浏览器实时抓取计算，与电脑生成的那一期相互独立；两者应一致。</div>' +
+      '<div class="psum"><div class="psumhead">综合进度 <b>' + pAll + '%</b>' +
+      '<span class="psumtag">达标 ' + okn + '/3</span></div>' +
+      '<div class="pbar3"><div class="pfill3" style="width:' + pAll + '%"></div></div>' +
+      '<div class="pmeta"><span>零进度</span><span>三项平均</span><span>完全达标</span></div></div>' +
+      '<div class="pfoot">阈值：跌停≤5家、红盘率≥45%、上证站上MA20<br/>' +
+      '本区由浏览器实时抓取计算，与电脑生成的那一期相互独立。</div>' +
       '</div>';
   }
 
