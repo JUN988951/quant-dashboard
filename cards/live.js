@@ -97,18 +97,19 @@
              '<span class="lm">涨停' + c.zt + ' 连板' + c.lb + '</span></div>';
     }).join('');
 
+    var okDt = r.dt <= 5, okRed = r.redRate >= 45, okDev = r.dev20 >= 0;
+    var okn = (okDt ? 1 : 0) + (okRed ? 1 : 0) + (okDev ? 1 : 0);
     var progRows = [
-      ['跌停家数', r.dt + ' 家', '≤ 5 家', r.progress.dt],
-      ['红盘率', (r.redRate == null ? '—' : r.redRate.toFixed(1) + '%'), '≥ 45%',
-       (r.progress.red == null ? 0 : r.progress.red)],
+      ['跌停家数', r.dt + ' 家', okDt ? '✓ 已达标' : '还差 ' + Math.max(0, r.dt - 5) + ' 家', okDt],
+      ['红盘率', (r.redRate == null ? '—' : r.redRate.toFixed(1) + '%'),
+       okRed ? '✓ 已达标' : (r.redRate == null ? '数据缺失' : '还差 ' + (45 - r.redRate).toFixed(1) + ' 个点'), okRed],
       ['上证 vs MA20', (r.dev20 >= 0 ? '+' : '') + r.dev20.toFixed(2) + '%',
-       '站上 ' + r.ma20.toFixed(2), r.progress.dev]
+       okDev ? '✓ 已达标' : '还差 ' + Math.abs(r.dev20).toFixed(2) + ' 个点', okDev]
     ].map(function (x) {
       return '<div class="prow"><div class="pname">' + x[0] + '</div>' +
              '<div class="pcur">' + x[1] + '</div>' +
-             '<div class="pbarwrap">' + bar(x[3]) + '</div>' +
-             '<div class="ptgt">' + x[2] + '</div>' +
-             '<div class="pnum">' + Math.round(x[3]) + '%</div></div>';
+             '<div class="pgap' + (x[3] ? ' ok' : '') + '">' + x[2] + '</div>' +
+             '<div></div></div>';
     }).join('');
 
     box.innerHTML =
@@ -145,7 +146,7 @@
       '<div class="lh">板块超额（板块 − 中证800）</div>' + exRows +
       '<div class="lh">今日题材（同花顺概念 · 按涨幅）</div>' + cRows +
       '<div class="lh">离可买入还差多少</div>' + progRows +
-      '<div class="pfoot">综合进度 <b>' + r.progressAll + '%</b> ｜ ' +
+      '<div class="pfoot"><b>达标 ' + okn + '/3</b> ｜ 阈值：跌停≤5家、红盘率≥45%、上证站上MA20<br/>' +
       '本区由浏览器实时抓取计算，与电脑生成的那一期相互独立；两者应一致。</div>' +
       '</div>';
   }
