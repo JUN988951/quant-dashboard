@@ -246,9 +246,9 @@
           return Math.max(0, Math.min(100, p));
         }
         out.progress = {
-          dt: r1(prog(out.dt, 60, 5)),
-          red: (out.redRate == null) ? null : r1(prog(out.redRate, 10, 45)),
-          dev: r1(prog(out.dev20, -2, 0))
+          dt: r1(prog(out.dt, 100, 5)),
+          red: (out.redRate == null) ? null : r1(prog(out.redRate, 0, 45)),
+          dev: r1(prog(out.dev20, -3, 0))
         };
         var pg = [out.progress.dt, out.progress.dev];
         if (out.progress.red != null) pg.push(out.progress.red);
