@@ -191,6 +191,14 @@ strong{font-weight:700}
  .ptgt{display:none}
 }
 
+/* ── 数据健康横幅 ── */
+.statusbar{border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.75;
+ margin-bottom:13px;border:1px solid transparent}
+.statusbar.good{background:rgba(30,132,73,.10);border-color:rgba(30,132,73,.35);color:var(--down)}
+.statusbar.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.statusbar.bad{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);
+ font-weight:600}
+.statusbar b{font-weight:700}
 /* ── 实时仪表盘 ── */
 .livecard{border-color:#8ab4a0}
 .livehead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin:0 0 9px}
@@ -231,12 +239,13 @@ strong{font-weight:700}
 
 <div class="masthead">
   <h1>A股每日决策清单</h1>
-  <div class="meta">共 11 期 ｜ 更新于 2026-11-20 19:52</div>
+  <div class="meta">共 11 期 ｜ 更新于 2026-11-20 19:57</div>
 </div>
 
+<div id="datastatus"></div>
 <div id="live"></div>
 
-<div class="sechead">📌 最近一期（电脑生成 · 2026-11-20 19:52）</div>
+<div class="sechead">📌 最近一期（电脑生成 · 2026-11-20 19:57）</div>
 
 <div class="hero">
   <div class="band"></div>
@@ -720,5 +729,5 @@ strong{font-weight:700}
 <a href="#" class="totop" title="回到顶部">↑</a>
 </div>
 <script src="calc.js?v=9ba4ab2f"></script>
-<script src="live.js?v=d62995ee"></script>
+<script src="live.js?v=c0437993"></script>
 </body></html>
