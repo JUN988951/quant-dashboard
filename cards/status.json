@@ -3,7 +3,11 @@
  "ok": true,
  "checks_total": 10,
  "checks_failed": [],
- "generated_at": "2026-11-20 20:05",
- "published": true,
- "note": ""
+ "generated_at": "2026-11-20 20:46",
+ "published": false,
+ "note": "",
+ "okn": 0,
+ "dt": 58,
+ "red_rate": 5.7,
+ "dev20": -2.83
 }
