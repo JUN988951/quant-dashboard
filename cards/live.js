@@ -4,6 +4,48 @@
  */
 (function () {
   'use strict';
+
+  /* ── 数据健康横幅：无论自检是否通过、页面是否更新，都让用户一眼看到 ── */
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function bjToday() {
+    var d = new Date(Date.now() + (8 * 60 + new Date().getTimezoneOffset()) * 60000);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function esc2(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function showStatus() {
+    var el = document.getElementById('datastatus');
+    if (!el) return;
+    fetch('status.json?_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('no status'); return r.json(); })
+      .then(function (s) {
+        var today = bjToday();
+        var cls, icon, text;
+        if (s.ok === false) {
+          cls = 'bad'; icon = '🔴';
+          text = '<b>今日数据自检未通过，本次未发布新数字</b>（下面显示的是上一期，请勿据此操作）' +
+                 (s.note ? '<br/>原因：' + esc2(s.note) : '');
+        } else if (s.date && s.date !== today) {
+          cls = 'warn'; icon = '🟡';
+          text = '页面数字是 <b>' + esc2(s.date) + '</b> 的，不是今天（' + today +
+                 '）。底部实时区仍是最新，可参考。';
+        } else {
+          cls = 'good'; icon = '🟢';
+          text = '数据日期 <b>' + esc2(s.date) + '</b> ｜ 自检 ' +
+                 (s.checks_total || 0) + ' 项通过 ｜ 生成于 ' + esc2(s.generated_at || '');
+        }
+        el.innerHTML = '<div class="statusbar ' + cls + '">' + icon + ' ' + text + '</div>';
+      })
+      .catch(function () {
+        el.innerHTML = '<div class="statusbar warn">🟡 无法读取数据状态（status.json 未取到）' +
+                       '——请勿把本页数字当作最新。</div>';
+      });
+  }
+  showStatus();
+
   var box = document.getElementById('live');
   if (!box || !window.DSHCalc) return;
 
