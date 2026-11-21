@@ -1,11 +1,16 @@
 {
  "date": "2026-11-20",
- "ok": true,
+ "ok": false,
  "checks_total": 10,
- "checks_failed": [],
- "generated_at": "2026-11-20 20:47",
- "published": true,
- "note": "",
+ "checks_failed": [
+  {
+   "name": "K线文件新鲜（<12h）",
+   "detail": "23.2 小时前"
+  }
+ ],
+ "generated_at": "2026-11-21 18:58",
+ "published": false,
+ "note": "K线文件新鲜（<12h）（23.2 小时前）",
  "okn": 0,
  "dt": 58,
  "red_rate": 5.7,
