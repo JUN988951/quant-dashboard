@@ -1,10 +1,10 @@
 {
  "date": "2026-11-24",
  "ok": true,
- "checks_total": 10,
+ "checks_total": 11,
  "checks_failed": [],
- "generated_at": "2026-11-24 18:44",
- "published": true,
+ "generated_at": "2026-11-24 19:05",
+ "published": false,
  "note": "",
  "okn": 1,
  "dt": 2,
