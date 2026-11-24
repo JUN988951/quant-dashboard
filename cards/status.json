@@ -1,13 +1,13 @@
 {
- "date": "2026-11-23",
+ "date": "2026-11-24",
  "ok": true,
  "checks_total": 10,
  "checks_failed": [],
- "generated_at": "2026-11-23 20:05",
- "published": true,
+ "generated_at": "2026-11-24 18:05",
+ "published": false,
  "note": "",
- "okn": 2,
- "dt": 3,
- "red_rate": 82.4,
- "dev20": -2.47
+ "okn": 1,
+ "dt": 2,
+ "red_rate": 35.2,
+ "dev20": -2.08
 }
