@@ -269,7 +269,9 @@
         return breadth().then(function (b) {
           out.up = b.up; out.down = b.down; out.flat = b.flat;
           out.total = b.up + b.down + b.flat;
-          out.redRate = r1(b.up / (b.up + b.down) * 100);
+          // 与主路径（腾讯 zhishu）同口径：分母含平盘。曾误写成 up/(up+down)，
+          // 导致备用源时红盘率偏高 1 个点左右，与 Python 侧对账不一致。
+          out.redRate = r1(b.up / (b.up + b.down + b.flat) * 100);
           out.redSource = 'eastmoney';
           return finalize();
         }).catch(function () {
