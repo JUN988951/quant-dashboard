@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量化交易分析看板</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+        .update-time {
+            text-align: center;
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #00d4ff, #7b2ff7);
+            border-radius: 2px;
+        }
+        .full-width { grid-column: 1 / -1; }
+        
+        /* 板块强度 */
+        .sector-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .sector-item {
+            text-align: center;
+            padding: 16px 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+        .sector-item:hover { transform: translateY(-2px); }
+        .sector-name { font-size: 0.85rem; color: #aaa; margin-bottom: 6px; }
+        .sector-value { font-size: 1.5rem; font-weight: 700; }
+        .sector-value.hot { color: #ff4757; }
+        .sector-value.warm { color: #ffa502; }
+        .sector-value.normal { color: #2ed573; }
+        .sector-value.cold { color: #747d8c; }
+        
+        /* 趋势信号 */
+        .trend-signals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .trend-tag {
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .trend-tag.confirmed { background: rgba(255,71,87,0.15); color: #ff4757; border: 1px solid rgba(255,71,87,0.3); }
+        .trend-tag.withdrawing { background: rgba(255,165,2,0.15); color: #ffa502; border: 1px solid rgba(255,165,2,0.3); }
+        .trend-tag.new { background: rgba(46,213,115,0.15); color: #2ed573; border: 1px solid rgba(46,213,115,0.3); }
+        
+        /* 龙头列表 */
+        .leader-list { list-style: none; }
+        .leader-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .leader-item:last-child { border-bottom: none; }
+        .leader-rank {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .rank-1 { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0, #808080); color: #000; }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32, #8b4513); color: #fff; }
+        .rank-other { background: rgba(255,255,255,0.1); color: #aaa; }
+        .leader-info { flex: 1; margin-left: 14px; }
+        .leader-name { font-weight: 600; font-size: 1rem; }
+        .leader-code { font-size: 0.8rem; color: #888; margin-left: 8px; }
+        .leader-sector { font-size: 0.75rem; color: #666; display: block; margin-top: 3px; }
+        .leader-score {
+            font-weight: 700;
+            font-size: 1.2rem;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* 信号统计 */
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .signal-item {
+            padding: 20px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            text-align: center;
+        }
+        .signal-count { font-size: 2.5rem; font-weight: 700; }
+        .signal-label { font-size: 0.85rem; color: #aaa; margin-top: 6px; }
+        .signal-item.attack .signal-count { color: #ff4757; }
+        .signal-item.ambush .signal-count { color: #ffa502; }
+        .signal-item.limit .signal-count { color: #2ed573; }
+        .signal-item.board .signal-count { color: #00d4ff; }
+        
+        /* 表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        th { color: #888; font-weight: 500; font-size: 0.85rem; }
+        .positive { color: #2ed573; }
+        .negative { color: #ff4757; }
+        
+        /* 持仓卡片 */
+        .holding-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .holding-item:last-child { margin-bottom: 0; }
+        .holding-info { flex: 1; }
+        .holding-name { font-weight: 600; font-size: 1rem; }
+        .holding-detail { font-size: 0.8rem; color: #888; margin-top: 4px; }
+        .holding-pnl { font-weight: 700; font-size: 1.1rem; }
+        .holding-pnl.profit { color: #2ed573; }
+        .holding-pnl.loss { color: #ff4757; }
+        
+        /* 情绪周期 */
+        .emotion-bar {
+            display: flex;
+            height: 40px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .emotion-stage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .emotion-stage.start { background: rgba(46,213,115,0.3); flex: 1; }
+        .emotion-stage.ferment { background: rgba(255,165,2,0.3); flex: 1; }
+        .emotion-stage.climax { background: rgba(255,71,87,0.3); flex: 1; }
+        .emotion-stage.retreat { background: rgba(116,125,140,0.3); flex: 1; }
+        .emotion-stage.ice { background: rgba(108,92,231,0.3); flex: 1; }
+        .emotion-indicator {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        .emotion-current { font-size: 1.2rem; font-weight: 700; color: #ffa502; }
+        
+        /* 任务状态 */
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .task-item {
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .task-name { color: #aaa; margin-bottom: 4px; }
+        .task-status { font-weight: 600; }
+        .task-status.ok { color: #2ed573; }
+        .task-status.warn { color: #ffa502; }
+        .task-status.error { color: #ff4757; }
+        
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #555;
+            font-size: 0.85rem;
+        }
+        .footer a { color: #00d4ff; text-decoration: none; }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sector-grid { grid-template-columns: repeat(2, 1fr); }
+            .signal-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 量化交易分析看板</h1>
+        <div class="subtitle">OpenClaw 量化系统 · 每日自动更新</div>
+        <div class="update-time">最后更新: 2026-11-26 15:40 | 数据日期: 2026-11-26</div>
+        
+        <div class="grid">
+            <!-- 板块强度 -->
+            <div class="card">
+                <div class="card-title">📈 板块强度排行</div>
+                <div class="sector-grid">
+                    
+                    <div class="sector-item">
+                        <div class="sector-name">金融</div>
+                        <div class="sector-value hot">41.8</div>
+                    </div>
+                    <div class="sector-item">
+                        <div class="sector-name">电力</div>
+                        <div class="sector-value normal">20.9</div>
+                    </div>
+                    <div class="sector-item">
+                        <div class="sector-name">制造</div>
+                        <div class="sector-value warm">31.5</div>
+                    </div>
+                    <div class="sector-item">
+                        <div class="sector-name">科技</div>
+                        <div class="sector-value warm">37.6</div>
+                    </div>
+                    <div class="sector-item">
+                        <div class="sector-name">金属</div>
+                        <div class="sector-value normal">27.2</div>
+                    </div>
+                    <div class="sector-item">
+                        <div class="sector-name">消费</div>
+                        <div class="sector-value warm">38.6</div>
+                    </div>
+                    <div class="sector-item">
+                        <div class="sector-name">医药</div>
+                        <div class="sector-value hot">41.6</div>
+                    </div>
+                    <div class="sector-item">
+                        <div class="sector-name">能源</div>
+                        <div class="sector-value normal">29.9</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 强势板块推荐 -->
+            <div class="card">
+                <div class="card-title">🔥 强势板块推荐（含回测追踪）</div>
+                <div style="text-align:center; color:#666; padding:20px;">暂无推荐</div>
+            </div>
+
+            <!-- 趋势信号 -->
+            <div class="card">
+                <div class="card-title">🔥 趋势信号</div>
+                <div class="trend-signals">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="padding: 12px 16px; background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.3); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">🔥 金融 主线确认</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #ffa502; font-weight: 600; font-size: 0.85rem;">强度:中</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">41.8</span>
+                    <span style="color: #ffa502; font-weight: 600; font-size: 1rem;">→2.1</span>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                连续3天≥30，资金持续流入
+            </div>
+        </div>
+        <div style="padding: 12px 16px; background: rgba(255,165,2,0.15); border: 1px solid rgba(255,165,2,0.3); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">⚠️ 电力 主力撤退</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #747d8c; font-weight: 600; font-size: 0.85rem;">强度:弱</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">20.9</span>
+                    <span style="color: #ff4757; font-weight: 600; font-size: 1rem;">↓19.5</span>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                今日下降19.5分，注意风险
+            </div>
+        </div>
+        <div style="padding: 12px 16px; background: rgba(255,165,2,0.15); border: 1px solid rgba(255,165,2,0.3); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">⚠️ 制造 主力撤退</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #747d8c; font-weight: 600; font-size: 0.85rem;">强度:弱</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">31.5</span>
+                    <span style="color: #ff4757; font-weight: 600; font-size: 1rem;">↓19.0</span>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                今日下降19.0分，注意风险
+            </div>
+        </div>
+        <div style="padding: 12px 16px; background: rgba(255,165,2,0.15); border: 1px solid rgba(255,165,2,0.3); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">⚠️ 科技 主力撤退</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #ffa502; font-weight: 600; font-size: 0.85rem;">强度:中</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">37.6</span>
+                    <span style="color: #ff4757; font-weight: 600; font-size: 1rem;">↓17.2</span>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                今日下降17.2分，注意风险
+            </div>
+        </div>
+        <div style="padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">📊 金属 震荡观望</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #747d8c; font-weight: 600; font-size: 0.85rem;">强度:弱</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">27.2</span>
+                    
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                无明显趋势，等待方向
+            </div>
+        </div>
+        <div style="padding: 12px 16px; background: rgba(255,165,2,0.15); border: 1px solid rgba(255,165,2,0.3); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">⚠️ 消费 主力撤退</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #ffa502; font-weight: 600; font-size: 0.85rem;">强度:中</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">38.6</span>
+                    <span style="color: #ff4757; font-weight: 600; font-size: 1rem;">↓18.5</span>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                今日下降18.5分，注意风险
+            </div>
+        </div>
+        <div style="padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">📊 医药 震荡观望</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #ffa502; font-weight: 600; font-size: 0.85rem;">强度:中</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">41.6</span>
+                    
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                无明显趋势，等待方向
+            </div>
+        </div>
+        <div style="padding: 12px 16px; background: rgba(255,165,2,0.15); border: 1px solid rgba(255,165,2,0.3); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 0.95rem;">⚠️ 能源 主力撤退</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: #747d8c; font-weight: 600; font-size: 0.85rem;">强度:弱</span>
+                    <span style="color: #aaa; font-size: 0.85rem;">29.9</span>
+                    <span style="color: #ff4757; font-weight: 600; font-size: 1rem;">↓18.3</span>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: #888;">
+                今日下降18.3分，注意风险
+            </div>
+        </div></div>
+                </div>
+            </div>
+
+            <!-- 龙头筛选 -->
+            <div class="card">
+                <div class="card-title">🏆 强势板块龙头TOP5</div>
+                <ul class="leader-list">
+                    
+                    <li class="leader-item">
+                        <span class="leader-rank rank-1">1</span>
+                        <div class="leader-info">
+                            <span class="leader-name">海澜之家</span>
+                            <span class="leader-code">600398</span>
+                            <span class="leader-sector">服装家纺</span>
+                        </div>
+                        <span class="leader-score">84分</span>
+                    </li>
+                    <li class="leader-item">
+                        <span class="leader-rank rank-2">2</span>
+                        <div class="leader-info">
+                            <span class="leader-name">交通银行</span>
+                            <span class="leader-code">601328</span>
+                            <span class="leader-sector">国有大型银行Ⅱ</span>
+                        </div>
+                        <span class="leader-score">84分</span>
+                    </li>
+                    <li class="leader-item">
+                        <span class="leader-rank rank-3">3</span>
+                        <div class="leader-info">
+                            <span class="leader-name">农业银行</span>
+                            <span class="leader-code">601288</span>
+                            <span class="leader-sector">国有大型银行Ⅱ</span>
+                        </div>
+                        <span class="leader-score">82分</span>
+                    </li>
+                    <li class="leader-item">
+                        <span class="leader-rank rank-other">4</span>
+                        <div class="leader-info">
+                            <span class="leader-name">伊利股份</span>
+                            <span class="leader-code">600887</span>
+                            <span class="leader-sector">饮料乳品</span>
+                        </div>
+                        <span class="leader-score">81分</span>
+                    </li>
+                    <li class="leader-item">
+                        <span class="leader-rank rank-other">5</span>
+                        <div class="leader-info">
+                            <span class="leader-name">雅戈尔</span>
+                            <span class="leader-code">600177</span>
+                            <span class="leader-sector">服装家纺</span>
+                        </div>
+                        <span class="leader-score">78分</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 短线信号 -->
+            <div class="card">
+                <div class="card-title">🎯 短线选股信号</div>
+                <div class="signal-grid">
+                    <div class="signal-item attack">
+                        <div class="signal-count">0</div>
+                        <div class="signal-label">突击战（放量突破）</div>
+                    </div>
+                    <div class="signal-item ambush">
+                        <div class="signal-count">0</div>
+                        <div class="signal-label">伏击战（缩量蓄势）</div>
+                    </div>
+                    <div class="signal-item limit">
+                        <div class="signal-count">0</div>
+                        <div class="signal-label">涨停股</div>
+                    </div>
+                    <div class="signal-item board">
+                        <div class="signal-count">0</div>
+                        <div class="signal-label">首板观察池</div>
+                    </div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <div style="color: #888; font-size: 0.85rem; margin-bottom: 8px;">🏆 TOP3候选股票</div>
+                    <div style="text-align:center; color:#666; padding:10px;">暂无数据</div>
+                </div>
+            </div>
+
+            <!-- 回测报告 -->
+            <div class="card">
+                <div class="card-title">📊 策略回测报告</div>
+                <div style="font-size: 0.85rem; line-height: 1.6;"><div style="font-size: 1rem; font-weight: 600; margin: 8px 0;">🔍 开始回测验证...</div><hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0;"><div style="color: #2ed573;">✅ 已验证 18 条预测记录</div><div style="font-size: 1rem; font-weight: 600; margin: 8px 0;">📊 多策略回测报告</div><hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0;"><div style="color: #aaa;">已验证天数: 20天</div><div style="color: #aaa;">总选股数: 0只</div><div>📈 整体表现:</div><div style="color: #2ed573;">✅ 成功(>3%): 0只</div><div style="color: #2ed573;">📈 盈利(0-3%): 0只</div><div style="color: #ff4757;">📉 亏损: 0只</div><div style="color: #ff4757;">🛑 止损: 0只</div><div>⏳ 持有中: 0只</div><div>📋 按策略统计:</div><div style="margin-top: 12px; color: #00d4ff;">📈 近期验证:</div><div>2026-11-19 [伏击战]: 待验证</div><div>2026-11-19 [强势板块-能源]: 待验证</div><div>2026-11-19 [强势板块强势股]: 待验证</div><div>2026-11-20 [未知]: 待验证</div><div>2026-11-24 [未知]: 待验证</div></div>
+            </div>
+
+            <!-- 预判系统健康报告 -->
+            <div class="card">
+                <div class="card-title">🔮 预判系统健康报告</div>
+                <div style="font-size: 0.85rem; line-height: 1.6;"><div style="font-size: 1rem; font-weight: 600; margin: 8px 0;">🔍 预判系统健康报告 | 2026-11-26 15:40:03</div><hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0;"><div style="color: #00d4ff; font-weight: 600; margin-top: 12px;">【第一层】数据质量监控</div><div style="color: #ffa502;">⚠️ 最新预测是2026-11-25，今日未预测</div><div style="color: #00d4ff; font-weight: 600; margin-top: 12px;">【第二层】准确率监控</div><div style="color: #ffa502;">⚠️ 准确率偏低，需要优化</div><div>板块预测命中率: 64%</div><div>个股预测命中率: 35%</div><div>已验证天数: 18天</div><div style="color: #00d4ff; font-weight: 600; margin-top: 12px;">【第三层】自动优化</div><div style="color: #7b2ff7;">🔧 已执行优化:</div><div>→ 重点关注: 银行, 家用电器</div><div>→ 减少关注: 通信</div><hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0;"><div style="color: #ffa502;">⚠️ 系统存在问题，需要关注</div></div>
+            </div>
+
+            <!-- 持仓跟踪 -->
+            <div class="card">
+                <div class="card-title">💼 持仓跟踪</div>
+                <div style="text-align:center; color:#666; padding:20px;">暂无持仓</div>
+            </div>
+
+            <!-- 情绪周期 -->
+            <div class="card">
+                <div class="card-title">🎭 市场情绪周期</div>
+                <div class="emotion-bar">
+                    <div class="emotion-stage start">启动</div>
+                    <div class="emotion-stage ferment">发酵</div>
+                    <div class="emotion-stage climax">高潮</div>
+                    <div class="emotion-stage retreat">退潮</div>
+                    <div class="emotion-stage ice">冰点</div>
+                </div>
+                <div class="emotion-indicator">
+                    当前阶段: <span class="emotion-current">启动期</span>
+                </div>
+            </div>
+
+            <!-- 全链路分析 -->
+            <div class="card full-width">
+                <div class="card-title">🔗 全链路综合分析</div>
+                
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-bottom:16px;">
+        <div class="signal-item" style="padding:12px;">
+            <div style="font-size:1.8rem; font-weight:700; color:#2ed573;">0</div>
+            <div class="signal-label">涨停</div>
+        </div>
+        <div class="signal-item" style="padding:12px;">
+            <div style="font-size:1.8rem; font-weight:700; color:#ff4757;">7</div>
+            <div class="signal-label">跌停</div>
+        </div>
+        <div class="signal-item" style="padding:12px;">
+            <div style="font-size:1.8rem; font-weight:700; color:#ffa502;">0%</div>
+            <div class="signal-label">炸板率</div>
+        </div>
+    </div>
+    <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px;">
+        <div style="color:#888; font-size:0.85rem; margin-bottom:6px;">🎭 情绪周期</div>
+        <div style="font-size:1.1rem; font-weight:600; color:#ffa502;">启动期</div>
+    </div>
+    <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px;">
+        <div style="color:#888; font-size:0.85rem; margin-bottom:6px;">📊 红盘率</div>
+        <div style="font-size:1.1rem; font-weight:600; color:#2ed573;">15.6%</div>
+    </div>
+    
+            </div>
+
+            <!-- 板块轮动热力图 -->
+            <div class="card full-width">
+                <div class="card-title">🔥 板块轮动热力图</div>
+                <div style="margin-bottom: 16px; color: #888; font-size: 0.85rem;">方块大小 = 板块强度 | 颜色 = 趋势变化（红=上升 绿=下降）</div>
+                <div id="heatmap" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
+                <div style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                    <div style="color: #888; font-size: 0.85rem; margin-bottom: 8px;">💡 主力方向判断</div>
+                    <div id="rotationInsight" style="font-size: 0.9rem; line-height: 1.6;"></div>
+                </div>
+            </div>
+
+            <!-- 板块趋势折线图 -->
+            <div class="card full-width">
+                <div class="card-title">📈 板块强度趋势线</div>
+                <div style="position: relative; height: 300px;">
+                    <canvas id="sectorChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 板块趋势对比图（新增） -->
+            <div class="card full-width">
+                <div class="card-title">🎯 板块趋势对比（7日变化）</div>
+                <div id="trendComparison" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;"></div>
+            </div>
+
+            <!-- 近7日走势表格 -->
+            <div class="card full-width">
+                <div class="card-title">📊 近7日板块强度数据</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>金融</th>
+                            <th>电力</th>
+                            <th>制造</th>
+                            <th>科技</th>
+                            <th>金属</th>
+                            <th>消费</th>
+                            <th>医药</th>
+                            <th>能源</th>
+                            <th>主线</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <tr>
+                            <td>2026-11-26</td>
+                            <td class="positive">41.8</td>
+                            <td class="">20.9</td>
+                            <td class="">31.5</td>
+                            <td class="">37.6</td>
+                            <td class="">27.2</td>
+                            <td class="">38.6</td>
+                            <td class="positive">41.6</td>
+                            <td class="">29.9</td>
+                            <td>金融+医药+消费</td>
+                        </tr>
+                        <tr>
+                            <td>2026-11-25</td>
+                            <td class="positive">43.9</td>
+                            <td class="positive">40.4</td>
+                            <td class="positive">50.5</td>
+                            <td class="positive">54.8</td>
+                            <td class="negative">15.2</td>
+                            <td class="positive">57.1</td>
+                            <td class="positive">40.2</td>
+                            <td class="positive">48.2</td>
+                            <td>消费+科技+制造</td>
+                        </tr>
+                        <tr>
+                            <td>2026-11-24</td>
+                            <td class="positive">51.5</td>
+                            <td class="">24.1</td>
+                            <td class="">39.6</td>
+                            <td class="negative">18.9</td>
+                            <td class="positive">45.2</td>
+                            <td class="">35.9</td>
+                            <td class="">23.7</td>
+                            <td class="">20.4</td>
+                            <td>金融+金属+制造</td>
+                        </tr>
+                        <tr>
+                            <td>2026-11-23</td>
+                            <td class="positive">56.4</td>
+                            <td class="positive">56.6</td>
+                            <td class="positive">75.9</td>
+                            <td class="positive">74.6</td>
+                            <td class="positive">80.0</td>
+                            <td class="positive">67.7</td>
+                            <td class="positive">67.9</td>
+                            <td class="positive">56.1</td>
+                            <td>金属+制造+科技</td>
+                        </tr>
+                        <tr>
+                            <td>2026-11-20</td>
+                            <td class="positive">49.3</td>
+                            <td class="positive">50.2</td>
+                            <td class="positive">48.9</td>
+                            <td class="positive">48.8</td>
+                            <td class="positive">42.9</td>
+                            <td class="positive">45.9</td>
+                            <td class="positive">50.2</td>
+                            <td class="positive">45.1</td>
+                            <td>电力+医药+金融</td>
+                        </tr>
+                        <tr>
+                            <td>2026-11-19</td>
+                            <td class="positive">44.0</td>
+                            <td class="">36.4</td>
+                            <td class="positive">55.3</td>
+                            <td class="positive">49.0</td>
+                            <td class="negative">18.7</td>
+                            <td class="">39.2</td>
+                            <td class="positive">43.5</td>
+                            <td class="positive">61.8</td>
+                            <td>能源+制造+科技</td>
+                        </tr>
+                        <tr>
+                            <td>2026-11-18</td>
+                            <td class="positive">62.9</td>
+                            <td class="">38.7</td>
+                            <td class="">27.0</td>
+                            <td class="">30.9</td>
+                            <td class="positive">41.1</td>
+                            <td class="positive">50.0</td>
+                            <td class="positive">45.5</td>
+                            <td class="positive">43.3</td>
+                            <td>金融+消费+医药</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 定时任务状态 -->
+            <div class="card full-width">
+                <div class="card-title">⚙️ 定时任务状态</div>
+                <div class="task-grid">
+                    
+                    <div class="task-item">
+                        <div class="task-name">收盘综合任务</div>
+                        <div class="task-status ok">✅ 正常</div>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-name">早盘综合</div>
+                        <div class="task-status ok">✅ 正常</div>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-name">板块趋势记录</div>
+                        <div class="task-status ok">✅ 正常</div>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-name">龙头筛选</div>
+                        <div class="task-status ok">✅ 正常</div>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-name">K线缓存</div>
+                        <div class="task-status ok">✅ 正常</div>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-name">行业映射校验</div>
+                        <div class="task-status ok">✅ 正常</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Powered by <a href="https://github.com/JUN988951/quant-dashboard" target="_blank">OpenClaw 量化交易系统</a> | 数据仅供参考，不构成投资建议
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // 板块轮动数据
+        const sectorData = {"dates": ["11-18", "11-19", "11-20", "11-23", "11-24", "11-25", "11-26"], "financial": [62.9, 44.0, 49.3, 56.4, 51.5, 43.9, 41.8], "power": [38.7, 36.4, 50.2, 56.6, 24.1, 40.4, 20.9], "manufacturing": [27.0, 55.3, 48.9, 75.9, 39.6, 50.5, 31.5], "tech": [30.9, 49.0, 48.8, 74.6, 18.9, 54.8, 37.6], "metal": [41.1, 18.7, 42.9, 80.0, 45.2, 15.2, 27.2], "consumer": [50.0, 39.2, 45.9, 67.7, 35.9, 57.1, 38.6], "medicine": [45.5, 43.5, 50.2, 67.9, 23.7, 40.2, 41.6], "energy": [43.3, 61.8, 45.1, 56.1, 20.4, 48.2, 29.9]};
+        
+        // 生成热力图
+        function generateHeatmap() {
+            const heatmap = document.getElementById('heatmap');
+            const sectors = ['金融', '电力', '制造', '科技', '金属', '消费', '医药', '能源'];
+            const dataArrays = [sectorData.financial, sectorData.power, sectorData.manufacturing, sectorData.tech, sectorData.metal, sectorData.consumer, sectorData.medicine, sectorData.energy];
+            const colors = ['#ff4757', '#ffa502', '#2ed573', '#00d4ff', '#7b2ff7', '#ff6b81', '#70a1ff', '#ffd700'];
+            
+            sectors.forEach((sector, idx) => {
+                const arr = dataArrays[idx];
+                const latest = arr[arr.length - 1];
+                const oldest = arr[0];
+                const change = latest - oldest;
+                
+                // 方块大小：根据强度 20-100 -> 80px-200px
+                const size = Math.max(80, Math.min(200, latest * 2 + 40));
+                
+                // 颜色：上升红色，下降绿色
+                let bgColor, textColor;
+                if (change > 5) {
+                    bgColor = `rgba(255, 71, 87, ${Math.min(0.9, 0.3 + change / 50)})`;
+                    textColor = '#fff';
+                } else if (change < -5) {
+                    bgColor = `rgba(46, 213, 115, ${Math.min(0.9, 0.3 + Math.abs(change) / 50)})`;
+                    textColor = '#fff';
+                } else {
+                    bgColor = 'rgba(255, 255, 255, 0.1)';
+                    textColor = '#aaa';
+                }
+                
+                const block = document.createElement('div');
+                block.style.cssText = `
+                    width: ${size}px;
+                    height: ${size}px;
+                    background: ${bgColor};
+                    border-radius: 12px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    transition: transform 0.2s;
+                    cursor: pointer;
+                `;
+                block.onmouseenter = () => block.style.transform = 'scale(1.05)';
+                block.onmouseleave = () => block.style.transform = 'scale(1)';
+                
+                const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '→';
+                const changeStr = change > 0 ? `+${change.toFixed(1)}` : change.toFixed(1);
+                
+                block.innerHTML = `
+                    <div style="font-size: 1.2rem; font-weight: 600; color: ${textColor};">${sector}</div>
+                    <div style="font-size: 1.8rem; font-weight: 700; color: ${textColor}; margin: 4px 0;">${latest.toFixed(1)}</div>
+                    <div style="font-size: 0.9rem; color: ${textColor};">${arrow} ${changeStr}</div>
+                `;
+                
+                heatmap.appendChild(block);
+            });
+        }
+        
+        generateHeatmap();
+        
+        // 生成图表
+        const ctx = document.getElementById('sectorChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sectorData.dates,
+                datasets: [
+                    {
+                        label: '金融',
+                        data: sectorData.financial,
+                        borderColor: '#ff4757',
+                        backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '电力',
+                        data: sectorData.power,
+                        borderColor: '#ffa502',
+                        backgroundColor: 'rgba(255, 165, 2, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '制造',
+                        data: sectorData.manufacturing,
+                        borderColor: '#2ed573',
+                        backgroundColor: 'rgba(46, 213, 115, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '科技',
+                        data: sectorData.tech,
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '金属',
+                        data: sectorData.metal,
+                        borderColor: '#7b2ff7',
+                        backgroundColor: 'rgba(123, 47, 247, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '消费',
+                        data: sectorData.consumer,
+                        borderColor: '#ff6b81',
+                        backgroundColor: 'rgba(255, 107, 129, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '医药',
+                        data: sectorData.medicine,
+                        borderColor: '#70a1ff',
+                        backgroundColor: 'rgba(112, 161, 255, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '能源',
+                        data: sectorData.energy,
+                        borderColor: '#ffd700',
+                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#eee',
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#eee',
+                        borderColor: 'rgba(255,255,255,0.2)',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        },
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        // 生成主力方向判断
+        function generateInsight() {
+            const insights = [];
+            const sectors = ['金融', '电力', '制造', '科技', '金属', '消费', '医药', '能源'];
+            const dataArrays = [sectorData.financial, sectorData.power, sectorData.manufacturing, sectorData.tech, sectorData.metal, sectorData.consumer, sectorData.medicine, sectorData.energy];
+            
+            // 数据顺序：arr[0]是最旧，arr[arr.length-1]是最新
+            // 找最强板块（最新值最高）
+            let maxIdx = 0;
+            let maxVal = 0;
+            dataArrays.forEach((arr, idx) => {
+                const latest = arr[arr.length - 1];
+                if (latest > maxVal) {
+                    maxVal = latest;
+                    maxIdx = idx;
+                }
+            });
+            insights.push(`🔥 <strong>${sectors[maxIdx]}</strong>板块当前最强（${maxVal.toFixed(1)}分）`);
+            
+            // 计算每个板块的变化（最新 - 最旧）
+            const changes = dataArrays.map((arr, idx) => {
+                if (arr.length >= 2) {
+                    return {
+                        sector: sectors[idx],
+                        change: arr[arr.length - 1] - arr[0]
+                    };
+                }
+                return { sector: sectors[idx], change: 0 };
+            });
+            
+            // 找上升最多的
+            const upChanges = changes.filter(c => c.change > 0).sort((a, b) => b.change - a.change);
+            if (upChanges.length > 0 && upChanges[0].change > 5) {
+                insights.push(`📈 <strong>${upChanges[0].sector}</strong>板块上升趋势最明显（+${upChanges[0].change.toFixed(1)}分）`);
+            }
+            
+            // 找下降最多的
+            const downChanges = changes.filter(c => c.change < 0).sort((a, b) => a.change - b.change);
+            if (downChanges.length > 0 && Math.abs(downChanges[0].change) > 10) {
+                insights.push(`⚠️ <strong>${downChanges[0].sector}</strong>板块主力撤退（${downChanges[0].change.toFixed(1)}分）`);
+            }
+            
+            // 如果所有板块都在下降
+            if (upChanges.length === 0 && downChanges.length > 0) {
+                insights.push(`⚠️ 全市场板块强度整体下降，注意风险`);
+            }
+            
+            document.getElementById('rotationInsight').innerHTML = insights.join('<br>');
+        }
+        
+        generateInsight();
+        
+        // 生成趋势对比图
+        function generateTrendComparison() {
+            const container = document.getElementById('trendComparison');
+            const sectors = ['金融', '电力', '制造', '科技', '金属', '消费', '医药', '能源'];
+            const dataArrays = [
+                sectorData.financial, 
+                sectorData.power, 
+                sectorData.manufacturing, 
+                sectorData.tech, 
+                sectorData.metal,
+                sectorData.consumer || [],
+                sectorData.medicine || [],
+                sectorData.energy || []
+            ];
+            const colors = ['#ff4757', '#ffa502', '#2ed573', '#00d4ff', '#7b2ff7', '#ff6b81', '#70a1ff', '#ffa502'];
+            
+            sectors.forEach((sector, idx) => {
+                const arr = dataArrays[idx];
+                if (!arr || arr.length === 0) return;
+                
+                const latest = arr[arr.length - 1];
+                const oldest = arr[0];
+                const change = latest - oldest;
+                const changePct = oldest > 0 ? (change / oldest * 100) : 0;
+                
+                // 趋势判断
+                let trend = '→';
+                let trendColor = '#ffa502';
+                let trendText = '震荡';
+                
+                if (change > 10) {
+                    trend = '↑↑';
+                    trendColor = '#ff4757';
+                    trendText = '强势上升';
+                } else if (change > 5) {
+                    trend = '↑';
+                    trendColor = '#ff4757';
+                    trendText = '上升';
+                } else if (change < -10) {
+                    trend = '↓↓';
+                    trendColor = '#2ed573';
+                    trendText = '强势下降';
+                } else if (change < -5) {
+                    trend = '↓';
+                    trendColor = '#2ed573';
+                    trendText = '下降';
+                }
+                
+                // 创建卡片
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    padding: 16px;
+                    background: rgba(255,255,255,0.03);
+                    border-radius: 12px;
+                    border-left: 4px solid ${colors[idx]};
+                `;
+                
+                // 生成sparkline SVG
+                const width = 120;
+                const height = 40;
+                const padding = 2;
+                const max = Math.max(...arr);
+                const min = Math.min(...arr);
+                const range = max - min || 1;
+                
+                const points = arr.map((val, i) => {
+                    const x = padding + (i / (arr.length - 1)) * (width - 2 * padding);
+                    const y = height - padding - ((val - min) / range) * (height - 2 * padding);
+                    return `${x},${y}`;
+                }).join(' ');
+                
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 600; font-size: 1rem; color: ${colors[idx]};">${sector}</div>
+                        <div style="font-size: 0.85rem; color: ${trendColor}; font-weight: 600;">${trend} ${trendText}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${latest.toFixed(1)}</div>
+                            <div style="font-size: 0.8rem; color: ${trendColor};">${change > 0 ? '+' : ''}${change.toFixed(1)} (${changePct > 0 ? '+' : ''}${changePct.toFixed(1)}%)</div>
+                        </div>
+                        <svg width="${width}" height="${height}" style="overflow: visible;">
+                            <polyline
+                                fill="none"
+                                stroke="${colors[idx]}"
+                                stroke-width="2"
+                                points="${points}"
+                            />
+                            <circle cx="${points.split(' ').pop().split(',')[0]}" cy="${points.split(' ').pop().split(',')[1]}" r="3" fill="${colors[idx]}" />
+                        </svg>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #666;">
+                        <span>7天前: ${oldest.toFixed(1)}</span>
+                        <span>今日: ${latest.toFixed(1)}</span>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        generateTrendComparison();
+    </script>
+</body>
+</html>
