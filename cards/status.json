@@ -1,11 +1,20 @@
 {
  "date": "2026-11-25",
- "ok": true,
+ "ok": false,
  "checks_total": 11,
- "checks_failed": [],
- "generated_at": "2026-11-25 20:05",
- "published": true,
- "note": "",
+ "checks_failed": [
+  {
+   "name": "K线文件新鲜（<12h）",
+   "detail": "25.4 小时前"
+  },
+  {
+   "name": "三池日期 = K线日期",
+   "detail": "三池 20261126 / K线 20261125"
+  }
+ ],
+ "generated_at": "2026-11-26 19:24",
+ "published": false,
+ "note": "K线文件新鲜（<12h）（25.4 小时前）；三池日期 = K线日期（三池 20261126 / K线 20261125）",
  "okn": 0,
  "dt": 43,
  "red_rate": 10.9,
