@@ -239,13 +239,13 @@ strong{font-weight:700}
 
 <div class="masthead">
   <h1>A股每日决策清单</h1>
-  <div class="meta">共 15 期 ｜ 更新于 2026-11-26 19:33</div>
+  <div class="meta">共 15 期 ｜ 更新于 2026-11-26 19:35</div>
 </div>
 
 <div id="datastatus"></div>
 <div id="live"></div>
 
-<div class="sechead">📌 最近一期（电脑生成 · 2026-11-26 19:33）</div>
+<div class="sechead">📌 最近一期（电脑生成 · 2026-11-26 19:35）</div>
 
 <div class="hero">
   <div class="band"></div>
@@ -336,7 +336,8 @@ strong{font-weight:700}
 <hr/>
 <h2>八、数据来源</h2>
 <table><thead><tr><th>项目</th><th>来源</th><th>状态</th></tr></thead><tbody><tr><td>涨停/跌停/炸板池</td><td>东财 <code>push2ex</code></td><td>✅</td></tr><tr><td>指数与板块K线</td><td>东财主源 / 腾讯备源（<code>kline.py</code>）</td><td>✅</td></tr><tr><td>涨跌家数</td><td>腾讯 <code>zhishu</code></td><td>✅（红盘率 32.2%）</td></tr><tr><td>概念题材</td><td>同花顺 <code>block_top</code></td><td>✅</td></tr><tr><td>漏斗记账</td><td><code>funnel.py</code>（额度 2237）</td><td>✅ 第 6 条记录</td></tr><tr><td>双实现对账</td><td>Python vs JS</td><td>✅ 22/22</td></tr></tbody></table>
-<blockquote><strong>今日系统侧改进</strong>：漏斗耗时从 &gt;120 秒降到 <strong>23.7 秒</strong>（个股不再额外索取涨跌家数）；「榜单区间不可达」的告警改为分级（只有整段不可达才报 ⚠️）。<br/>122 只里有 8 只（6 取不到 + 2 不足）K线拉取失败，按「失败即淘汰」处理，不影响结论。</blockquote></div></details><details id="c1"><summary><span class="left"><span class="sdate">2026-11-25</span><span class="stag">决策清单</span></span><span class="chev">▾</span></summary><div class="body"><blockquote>有效期至 <strong>2026-11-26（周四）14:50</strong><br/>战法：<strong>伏击战 · 挂均线价等回调</strong>（本账户禁突击战 / 禁打板）</blockquote>
+<blockquote><strong>今日系统侧改进</strong>：漏斗耗时从 &gt;120 秒降到 <strong>23.7 秒</strong>（个股不再额外索取涨跌家数）；「榜单区间不可达」的告警改为分级（只有整段不可达才报 ⚠️）。<br/>122 只里有 8 只（6 取不到 + 2 不足）K线拉取失败，按「失败即淘汰」处理，不影响结论。</blockquote>
+<blockquote><strong>红盘率口径说明</strong>：本卡正文的 32.2% 取自腾讯 <code>zhishu</code>（收盘时实测）。收盘后腾讯对本机 IP 返回 501，页面改用东财 <code>f104/f105/f106</code> 兜底，口径为 <strong>32.7%</strong>（东财含北交所，分子分母都略大）。两者都远低于 45% 阈值，<strong>不影响档位与达标判定</strong>。</blockquote></div></details><details id="c1"><summary><span class="left"><span class="sdate">2026-11-25</span><span class="stag">决策清单</span></span><span class="chev">▾</span></summary><div class="body"><blockquote>有效期至 <strong>2026-11-26（周四）14:50</strong><br/>战法：<strong>伏击战 · 挂均线价等回调</strong>（本账户禁突击战 / 禁打板）</blockquote>
 <hr/>
 <h2>一、档位与额度</h2>
 <table><thead><tr><th>项目</th><th>数值</th></tr></thead><tbody><tr><td><strong>大盘档</strong></td><td><strong>弱势（0~2 成）</strong> ← 从「震荡偏弱」跌回</td></tr><tr><td>账户档</td><td>持平 6 成（盈亏 <span class="down">−0.73%</span>）</td></tr><tr><td><strong>单票额度</strong></td><td><strong>0 元（禁止开新仓）</strong></td></tr><tr><td>持仓</td><td><strong>空仓</strong></td></tr><tr><td>可用资金</td><td><strong>11,104.58 元</strong></td></tr></tbody></table>
@@ -969,6 +970,6 @@ strong{font-weight:700}
 </div>
 <a href="#" class="totop" title="回到顶部">↑</a>
 </div>
-<script src="calc.js?v=9ba4ab2f"></script>
+<script src="calc.js?v=09ba75ff"></script>
 <script src="live.js?v=c0437993"></script>
 </body></html>
