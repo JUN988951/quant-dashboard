@@ -1,16 +1,11 @@
 {
  "date": "2026-11-27",
- "ok": false,
+ "ok": true,
  "checks_total": 11,
- "checks_failed": [
-  {
-   "name": "涨跌停数合理",
-   "detail": "涨停417 跌停0"
-  }
- ],
- "generated_at": "2026-11-27 20:58",
+ "checks_failed": [],
+ "generated_at": "2026-11-27 20:59",
  "published": false,
- "note": "涨跌停数合理（涨停417 跌停0）",
+ "note": "",
  "okn": 3,
  "dt": 0,
  "red_rate": 96.2,
