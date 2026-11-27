@@ -59,7 +59,7 @@
 
   function pool(kind, date) {
     var u = 'https://push2ex.eastmoney.com/getTopic' + kind + 'Pool?ut=' + EM_UT +
-            '&dpt=wz.ztzt&Pageindex=0&pagesize=300&sort=fbt:asc&date=' + date;
+            '&dpt=wz.ztzt&Pageindex=0&pagesize=600&sort=fbt:asc&date=' + date;
     return getJSON(u).then(function (j) {
       var d = (j && j.data) || {};
       return { tc: d.tc || 0, pool: d.pool || [] };
